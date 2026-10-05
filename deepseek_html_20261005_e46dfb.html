@@ -1,0 +1,985 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Flight 9 — Directions &amp; Airport Operations (Audio Lab)</title>
+<style>
+  :root{
+    --navy:#0b1f3a; --navy2:#122a4d; --sky:#1ea7e8; --amber:#f5a623;
+    --green:#28c76f; --red:#ea5455; --purple:#8e6ef2;
+    --ink:#122036; --paper:#f4f8fc; --card:#ffffff; --muted:#6b7c93;
+    --radius:16px; --shadow:0 8px 24px rgba(11,31,58,0.12);
+    font-family:'Segoe UI',system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--paper);color:var(--ink);}
+  body{min-height:100vh;}
+  header.topbar{
+    background:linear-gradient(135deg,var(--navy) 0%, var(--navy2) 100%);
+    color:#fff;padding:16px 18px 12px;position:sticky;top:0;z-index:50;
+    box-shadow:0 4px 18px rgba(0,0,0,.25);
+  }
+  .topbar-inner{max-width:1150px;margin:0 auto;}
+  .badge{
+    display:inline-block;background:var(--sky);color:#fff;font-size:11px;font-weight:700;
+    letter-spacing:1px;padding:5px 12px;border-radius:20px;text-transform:uppercase;margin-bottom:8px;
+  }
+  header.topbar h1{margin:0 0 4px;font-size:clamp(18px,3.6vw,26px);}
+  header.topbar p{margin:0 0 12px;color:#b9c8de;font-size:13px;}
+  nav.phasenav{display:flex;gap:6px;flex-wrap:wrap;}
+  nav.phasenav button{
+    flex:1 1 100px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);
+    color:#dce6f5;padding:8px 6px;border-radius:10px;font-size:11px;font-weight:600;cursor:pointer;
+    transition:.2s;text-align:center;
+  }
+  nav.phasenav button .num{display:block;font-size:9px;font-weight:800;color:var(--amber);letter-spacing:1px;margin-bottom:2px;}
+  nav.phasenav button.active{background:var(--sky);border-color:var(--sky);color:#fff;}
+  nav.phasenav button:hover:not(.active){background:rgba(255,255,255,0.16);}
+  .progress-outer{height:6px;background:rgba(255,255,255,0.15);border-radius:6px;margin-top:10px;overflow:hidden;}
+  .progress-inner{height:100%;width:0%;background:linear-gradient(90deg,var(--sky),var(--amber));transition:width .4s ease;}
+  main{max-width:1150px;margin:0 auto;padding:26px 18px 70px;}
+  .phase{display:none;animation:fadeIn .4s ease;}
+  .phase.active{display:block;}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+  .phase-title{display:flex;align-items:center;gap:10px;margin-bottom:6px;}
+  .phase-title .bar{width:5px;height:26px;background:var(--sky);border-radius:3px;}
+  .phase-title h2{margin:0;font-size:clamp(19px,3.2vw,25px);}
+  .phase-sub{color:var(--muted);margin:0 0 22px;font-size:14.5px;max-width:760px;}
+  .lab-card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:28px 22px;margin-bottom:20px;}
+  .audio-player-box{
+    background:#eef4fb;border-left:5px solid var(--sky);padding:16px 20px;border-radius:10px;
+    display:flex;align-items:center;gap:16px;margin-bottom:24px;flex-wrap:wrap;
+  }
+  .audio-btn-group{display:flex;gap:8px;flex-shrink:0;}
+  .audio-btn{
+    width:44px;height:44px;border-radius:50%;color:#fff;border:none;
+    font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;
+    transition:.2s;box-shadow:0 4px 12px rgba(11,31,58,0.15);
+  }
+  .audio-btn:hover{transform:scale(1.08);}
+  .audio-btn.play-btn{background:var(--sky);}
+  .audio-btn.play-btn:hover{background:var(--navy);}
+  .audio-btn.pause-btn{background:var(--amber);}
+  .audio-btn.pause-btn:hover{background:var(--red);}
+  .audio-btn.small{width:36px;height:36px;font-size:14px;}
+  .audio-info{flex:1;min-width:150px;}
+  .audio-info h4{margin:0 0 4px;font-size:15px;color:var(--navy);}
+  .audio-info p{margin:0;font-size:12.5px;color:var(--muted);}
+  .question-block{margin-bottom:24px;padding-bottom:18px;border-bottom:1px solid #eef4fb;}
+  .question-block:last-child{border-bottom:none;margin-bottom:0;padding-bottom:0;}
+  .q-text{font-size:15.5px;font-weight:700;color:var(--ink);margin-bottom:12px;}
+  .opt-grid{display:grid;grid-template-columns:1fr;gap:10px;}
+  .opt-btn{
+    background:#f7fafd;border:2px solid #e2ebf3;border-radius:12px;padding:12px 16px;
+    font-size:14px;font-weight:600;color:var(--ink);text-align:left;cursor:pointer;transition:.15s;
+    display:flex;align-items:center;gap:10px;
+  }
+  .opt-btn:hover{border-color:var(--sky);background:#fff;}
+  .opt-btn.correct{background:#e8f9ee;border-color:var(--green);color:#1c8a4d;}
+  .opt-btn.wrong{background:#fdecec;border-color:var(--red);color:#c53030;}
+  .opt-btn:disabled{opacity:0.6;cursor:not-allowed;}
+  /* Complete 2 words */
+  .complete-item{margin-bottom:24px;padding-bottom:20px;border-bottom:1px solid #eef4fb;}
+  .complete-item:last-child{border-bottom:none;margin-bottom:0;padding-bottom:0;}
+  .complete-sentence{font-size:16px;font-weight:700;color:var(--navy);margin:12px 0;line-height:2.2;}
+  .blank-input{
+    display:inline-block;min-width:130px;padding:6px 10px;border:2px dashed var(--sky);
+    border-radius:6px;font-size:15px;font-weight:700;color:var(--ink);
+    background:#fff;outline:none;text-align:center;margin:0 4px;
+  }
+  .blank-input:focus{border-color:var(--navy);border-style:solid;}
+  .blank-input.correct{border-color:var(--green);border-style:solid;background:#e8f9ee;color:#1c8a4d;}
+  .blank-input.wrong{border-color:var(--red);border-style:solid;background:#fdecec;color:#c53030;}
+  .blank-input:disabled{opacity:0.75;}
+  .complete-check-btn{
+    background:var(--sky);color:#fff;border:none;padding:10px 20px;border-radius:10px;font-weight:700;
+    cursor:pointer;font-size:13.5px;transition:.2s;margin-top:10px;
+  }
+  .complete-check-btn:hover{background:var(--navy);}
+  .complete-check-btn:disabled{opacity:0.5;cursor:not-allowed;}
+  .complete-feedback{font-size:13px;font-weight:700;margin-top:8px;min-height:18px;}
+  .complete-feedback.ok{color:var(--green);}
+  .complete-feedback.no{color:var(--red);}
+  .attempt-tag{
+    display:inline-block;font-size:11px;font-weight:800;color:var(--amber);background:#fff2da;
+    padding:3px 9px;border-radius:20px;margin-left:8px;letter-spacing:.5px;
+  }
+  .attempt-tag.maxed{color:var(--red);background:#fdecec;font-weight:900;}
+  .retry-note{
+    background:#fff6e6;border-left:5px solid var(--amber);padding:12px 16px;border-radius:10px;
+    font-size:13px;color:#7a5300;margin-bottom:20px;
+  }
+  .final-wrap{max-width:750px;margin:0 auto;text-align:center;}
+  .final-card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:40px 26px;}
+  .medal{font-size:80px;margin-bottom:6px;}
+  .final-card h3{font-size:26px;color:var(--navy);margin:0 0 4px;}
+  .final-card .medal-label{font-weight:800;color:var(--amber);text-transform:uppercase;letter-spacing:1px;font-size:13px;margin-bottom:18px;}
+  .final-score-big{font-size:52px;font-weight:900;color:var(--sky);margin-bottom:4px;}
+  .final-score-sub{color:var(--muted);font-size:13px;margin-bottom:26px;}
+  .final-breakdown{display:flex;flex-direction:column;gap:12px;text-align:left;margin-bottom:26px;}
+  .fb-row{display:flex;align-items:center;gap:12px;}
+  .fb-row .fb-label{width:200px;font-size:13px;font-weight:700;color:var(--ink);flex-shrink:0;}
+  .fb-row .fb-bar-outer{flex:1;height:10px;background:#e2ebf3;border-radius:6px;overflow:hidden;}
+  .fb-row .fb-bar-inner{height:100%;background:linear-gradient(90deg,var(--sky),var(--green));border-radius:6px;}
+  .fb-row .fb-val{width:60px;text-align:right;font-size:12.5px;font-weight:800;color:var(--muted);}
+  .restart-btn{background:var(--amber);border:none;color:#3a2600;padding:13px 26px;border-radius:10px;font-weight:800;cursor:pointer;font-size:14.5px;}
+  .restart-btn:hover{background:var(--sky);color:#fff;}
+  .result-box{margin-top:20px;padding:20px;border-radius:12px;font-weight:700;font-size:18px;}
+  .result-box.pass{background:#e8f9ee;color:var(--green);border:2px solid var(--green);}
+  .result-box.fail{background:#fdecec;color:var(--red);border:2px solid var(--red);}
+  footer.bottom{text-align:center;color:var(--muted);font-size:12px;padding:20px;}
+  footer.bottom span{color:var(--sky);font-weight:700;}
+  @media(max-width:640px){
+    nav.phasenav{gap:5px;}
+    nav.phasenav button{font-size:10px;padding:7px 4px;}
+    .fb-row .fb-label{width:130px;font-size:11px;}
+    .audio-player-box{gap:10px;}
+    .audio-btn-group{gap:5px;}
+    .audio-btn{width:38px;height:38px;font-size:15px;}
+    .blank-input{min-width:90px;font-size:13px;}
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <span class="badge">Aviation English · Flight 9 · Audio Lab</span>
+    <h1>Flight 9 — Directions &amp; Airport Operations</h1>
+    <p>Airport Vocabulary, Ground Operations &amp; Prepositions · 100% Listening · A2 Level</p>
+    <nav class="phasenav" id="phaseNav">
+      <button class="phase-btn active" data-phase="1"><span class="num">SECTION 1</span>Complete 2 Words</button>
+      <button class="phase-btn" data-phase="2"><span class="num">SECTION 2</span>Listening Medium</button>
+      <button class="phase-btn" data-phase="3"><span class="num">SECTION 3</span>Listening Long</button>
+      <button class="phase-btn" data-phase="4"><span class="num">SECTION 4</span>Listening Drill</button>
+      <button class="phase-btn" data-phase="5"><span class="num">SECTION 5</span>Listening Roleplay</button>
+      <button class="phase-btn" data-phase="6"><span class="num">SECTION 6</span>Final Review</button>
+    </nav>
+    <div class="progress-outer"><div class="progress-inner" id="topProgress"></div></div>
+  </div>
+</header>
+
+<main>
+
+  <section class="phase active" id="phase1">
+    <div class="phase-title"><span class="bar"></span><h2>Section 1: Complete the 2 Missing Words</h2></div>
+    <p class="phase-sub">Listen to each sentence and write the 2 missing words in the blanks. 3 attempts per sentence.</p>
+    <div class="retry-note">💡 Escucha la oración completa y escribe SOLO las 2 palabras que faltan.</div>
+    <div class="lab-card" id="completeArea"></div>
+  </section>
+
+  <section class="phase" id="phase2">
+    <div class="phase-title"><span class="bar"></span><h2>Section 2: Medium Listening — Ground Operations</h2></div>
+    <p class="phase-sub">Listen to two short ATC/ground transmissions and answer the questions. 3 attempts per question.</p>
+    <div id="listenMediumArea"></div>
+  </section>
+
+  <section class="phase" id="phase3">
+    <div class="phase-title"><span class="bar"></span><h2>Section 3: Long Listening — Taxi &amp; Ramp Report</h2></div>
+    <p class="phase-sub">Listen to the full operational report and answer the questions. 3 attempts per question.</p>
+    <div id="listenLongArea"></div>
+  </section>
+
+  <section class="phase" id="phase4">
+    <div class="phase-title"><span class="bar"></span><h2>Section 4: Listening Drill — Choose What You Heard</h2></div>
+    <p class="phase-sub">Listen carefully to each sentence and choose the option that matches exactly what you heard. 3 attempts per question.</p>
+    <div class="retry-note">🎧 Solo verás las opciones. Debes escuchar el audio para identificar la frase correcta.</div>
+    <div class="lab-card" id="drillArea"></div>
+  </section>
+
+  <section class="phase" id="phase5">
+    <div class="phase-title"><span class="bar"></span><h2>Section 5: Listening Roleplay — Choose the Correct Response</h2></div>
+    <p class="phase-sub">Listen to the question from ATC and select the correct professional response. 3 attempts per question.</p>
+    <div class="retry-note">🎧 Escucha la pregunta (no la verás escrita) y elige la respuesta correcta.</div>
+    <div class="lab-card" id="roleplayArea"></div>
+  </section>
+
+  <section class="phase" id="phase6">
+    <div class="phase-title"><span class="bar"></span><h2>Final Review &amp; Operational Summary</h2></div>
+    <p class="phase-sub">Comprehensive evaluation of your Flight 9 performance. Minimum 80% to pass.</p>
+    <div class="final-wrap" id="finalArea"></div>
+  </section>
+
+</main>
+
+<footer class="bottom">✈️ Flight 9 Complete · <span>Directions &amp; Airport Operations · Audio Lab</span></footer>
+
+<script>
+/* ============================================================
+   AUDIO SCRIPTS
+   ============================================================ */
+const AUDIOS = {
+  // Section 1 — Complete 2 words (full sentences)
+  c1: "The fuel truck is parked behind the aircraft wing.",
+  c2: "The marshaller is standing beside the nose gear.",
+  c3: "The aircraft is taxiing on Taxiway Alpha.",
+  c4: "The hold short line is in front of Runway 12.",
+  c5: "The catering truck is driving across the apron.",
+  c6: "The wind cone is located above the terminal.",
+  c7: "Stand number 5 is between Hangar A and Hangar B.",
+  c8: "The control tower is near the main terminal.",
+  c9: "The threshold is the beginning of the runway.",
+  c10: "The intersection is the crossing of two taxiways.",
+  c11: "The apron is used for parking and refueling.",
+  c12: "The hangar is under maintenance for repairs.",
+  c13: "The yellow signage is next to the taxiway.",
+  c14: "The aircraft is moving toward the main terminal.",
+  c15: "The ground crew is working on the apron today.",
+
+  // Section 2 — Medium Listening
+  s2a: "Ground control to all ground vehicles on the apron. Please be advised that Flight DAC nine zero nine is taxiing on Taxiway Alpha toward the main apron. The hold short line is in front of Runway one two. All ground vehicles must follow the yellow signage next to the taxiway. The catering truck is driving across the apron and the fuel truck is parked behind the aircraft wing. Please remain clear of the active taxiway.",
+
+  s2b: "Tower to Flight DAC nine zero nine. The wind cone above the terminal indicates strong winds from the north. The runway threshold is clear. Stand number five is located between Hangar A and Hangar B. The ground marshaller is standing beside the nose gear waiting to guide you. The control tower confirms your taxi clearance. Please proceed to the apron and hold short of Runway one eight.",
+
+  // Section 3 — Long Listening
+  s3: "This is the ground operations report for Flight DAC nine zero nine at the international airfield. Ground operations require absolute precision to avoid runway incursions and maintain efficient traffic flow during peak hours. The aircraft is taxiing via Taxiway Alpha after clearing the active runway threshold. The control tower has instructed the flight crew to proceed straight ahead down Alpha until they reach the busy intersection with Taxiway Bravo. At that point, they are instructed to hold short of Runway one eight. This holding instruction is mandatory because an airport catering truck is currently driving across the active ramp area to service another departure, creating a temporary hazard. Meanwhile, on the main apron, the ground marshaller is already waiting beside Stand number five to guide the pilots during their parking maneuver. Stand number five is strategically located between the main passenger terminal and Hangar two. A heavy fuel truck is parked behind the designated red safety lines, remaining stationary and ready to initiate the refueling process. The ground crew will check the wind cone one last time to verify if there are any sudden changes in wind velocity that could affect the aircraft's ground taxiing trajectory.",
+
+  // Section 4 — Listening Drill
+  dr1: "The fuel truck is parked behind the aircraft wing.",
+  dr2: "The marshaller is standing beside the nose gear.",
+  dr3: "The aircraft is taxiing on Taxiway Alpha.",
+  dr4: "The hold short line is in front of Runway 12.",
+  dr5: "The catering truck is driving across the apron.",
+  dr6: "The wind cone is located above the terminal.",
+  dr7: "Stand number 5 is between Hangar A and Hangar B.",
+  dr8: "The control tower is near the main terminal.",
+  dr9: "The threshold is the beginning of the runway.",
+  dr10: "The intersection is the crossing of two taxiways.",
+  dr11: "The apron is used for parking and refueling.",
+  dr12: "The ground crew is working on the apron today.",
+
+  // Section 5 — Listening Roleplay
+  rp1: "Where is the fuel truck parked?",
+  rp2: "Where is the marshaller standing?",
+  rp3: "Which taxiway is the aircraft using?",
+  rp4: "Where is the hold short line?",
+  rp5: "Where is the catering truck driving?",
+  rp6: "Where is the wind cone located?",
+  rp7: "Where is Stand number 5 located?",
+  rp8: "Where is the control tower located?",
+  rp9: "What is the threshold?",
+  rp10: "What is the apron used for?"
+};
+
+/* ============================================================
+   AUDIO PLAYER — PLAY (restart) / PAUSE
+   ============================================================ */
+function playAudio(key){
+  if(!('speechSynthesis' in window)) return;
+  window.speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(AUDIOS[key]);
+  u.lang = 'en-US';
+  u.rate = 0.75;
+  u.pitch = 1;
+  const voices = window.speechSynthesis.getVoices();
+  const enVoice = voices.find(v => v.lang === 'en-US') || voices.find(v => v.lang && v.lang.startsWith('en'));
+  if(enVoice) u.voice = enVoice;
+  window.speechSynthesis.speak(u);
+}
+function pauseAudio(){
+  if(!('speechSynthesis' in window)) return;
+  if(window.speechSynthesis.speaking && !window.speechSynthesis.paused){
+    window.speechSynthesis.pause();
+  }
+}
+window.speechSynthesis && window.speechSynthesis.getVoices();
+
+/* ============================================================
+   SOUND FX
+   ============================================================ */
+let audioCtx;
+function getCtx(){
+  if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+function playDing(){
+  try{
+    const ctx = getCtx();
+    [880, 1320].forEach((freq, i)=>{
+      const osc = ctx.createOscillator(); const gain = ctx.createGain();
+      osc.type='sine'; osc.frequency.value=freq;
+      const start=ctx.currentTime+i*0.09;
+      gain.gain.setValueAtTime(0.0001,start);
+      gain.gain.exponentialRampToValueAtTime(0.25,start+0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001,start+0.25);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(start); osc.stop(start+0.28);
+    });
+  }catch(e){}
+}
+function playBuzz(){
+  try{
+    const ctx = getCtx();
+    const osc = ctx.createOscillator(); const gain = ctx.createGain();
+    osc.type='sawtooth'; osc.frequency.value=130;
+    const start=ctx.currentTime;
+    gain.gain.setValueAtTime(0.0001,start);
+    gain.gain.exponentialRampToValueAtTime(0.2,start+0.03);
+    gain.gain.exponentialRampToValueAtTime(0.0001,start+0.35);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(start); osc.stop(start+0.38);
+  }catch(e){}
+}
+
+/* ============================================================
+   UTILITIES
+   ============================================================ */
+function shuffle(arr){
+  const a = [...arr];
+  for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; }
+  return a;
+}
+
+/* ============================================================
+   GLOBAL STATS
+   ============================================================ */
+const STATS = {
+  totalCorrect: 0,
+  totalWrong: 0,
+  sections: {
+    s1: { correct: 0, wrong: 0, max: 15 },
+    s2: { correct: 0, wrong: 0, max: 10 },
+    s3: { correct: 0, wrong: 0, max: 6 },
+    s4: { correct: 0, wrong: 0, max: 12 },
+    s5: { correct: 0, wrong: 0, max: 10 }
+  }
+};
+function addCorrect(sec){ STATS.totalCorrect++; STATS.sections[sec].correct++; }
+function addWrong(sec){ STATS.totalWrong++; STATS.sections[sec].wrong++; }
+
+/* ============================================================
+   SECTION 1 — COMPLETE 2 WORDS
+   ============================================================ */
+const COMPLETE_DATA = [
+  { id:'c1', audio:'c1', sentence:'The fuel truck is ______ ______ the aircraft wing.', answers:[['parked'],['behind']] },
+  { id:'c2', audio:'c2', sentence:'The marshaller is ______ ______ the nose gear.', answers:[['standing'],['beside']] },
+  { id:'c3', audio:'c3', sentence:'The aircraft is ______ on Taxiway ______.', answers:[['taxiing'],['alpha']] },
+  { id:'c4', audio:'c4', sentence:'The hold short line is ______ ______ of Runway 12.', answers:[['in'],['front']] },
+  { id:'c5', audio:'c5', sentence:'The catering truck is ______ ______ the apron.', answers:[['driving'],['across']] },
+  { id:'c6', audio:'c6', sentence:'The wind cone is ______ ______ the terminal.', answers:[['located','situated'],['above']] },
+  { id:'c7', audio:'c7', sentence:'Stand number 5 is ______ Hangar A ______ Hangar B.', answers:[['between'],['and']] },
+  { id:'c8', audio:'c8', sentence:'The control tower is ______ the ______ terminal.', answers:[['near','beside','by'],['main']] },
+  { id:'c9', audio:'c9', sentence:'The ______ is the ______ of the runway.', answers:[['threshold'],['beginning']] },
+  { id:'c10', audio:'c10', sentence:'The ______ is the ______ of two taxiways.', answers:[['intersection'],['crossing']] },
+  { id:'c11', audio:'c11', sentence:'The ______ is used for ______ and refueling.', answers:[['apron'],['parking']] },
+  { id:'c12', audio:'c12', sentence:'The ______ is ______ maintenance for repairs.', answers:[['hangar'],['under']] },
+  { id:'c13', audio:'c13', sentence:'The ______ signage is ______ to the taxiway.', answers:[['yellow'],['next']] },
+  { id:'c14', audio:'c14', sentence:'The aircraft is ______ toward the ______ terminal.', answers:[['moving'],['main']] },
+  { id:'c15', audio:'c15', sentence:'The ______ crew is ______ on the apron today.', answers:[['ground'],['working']] }
+];
+
+const completeState = {};
+
+function buildComplete(){
+  const area = document.getElementById('completeArea');
+  area.innerHTML = COMPLETE_DATA.map((item, i) => {
+    completeState[item.id] = { attempts:0, solved:false, maxAttempts:3 };
+    const parts = item.sentence.split('______');
+    return `
+      <div class="complete-item" id="${item.id}">
+        <div class="audio-btn-group" style="margin-bottom:8px;">
+          <button class="audio-btn play-btn small" onclick="playAudio('${item.audio}')">🔊</button>
+          <button class="audio-btn pause-btn small" onclick="pauseAudio()">⏸</button>
+          <span style="font-weight:700;color:var(--muted);font-size:13px;margin-left:8px;">Sentence ${i+1} <span class="attempt-tag" id="${item.id}-tag">0/3 attempts</span></span>
+        </div>
+        <div class="complete-sentence">
+          ${parts[0]}<input class="blank-input" id="${item.id}-b0" type="text" placeholder="word 1...">${parts[1] || ''}<input class="blank-input" id="${item.id}-b1" type="text" placeholder="word 2...">${parts[2] || ''}
+        </div>
+        <button class="complete-check-btn" id="${item.id}-check" onclick="checkComplete('${item.id}')">Check</button>
+        <div class="complete-feedback" id="${item.id}-fb"></div>
+      </div>
+    `;
+  }).join('');
+}
+
+function checkComplete(id){
+  const state = completeState[id];
+  if(state.solved) return;
+  if(state.attempts >= state.maxAttempts) return;
+
+  const item = COMPLETE_DATA.find(x => x.id === id);
+  const inputs = [document.getElementById(id+'-b0'), document.getElementById(id+'-b1')];
+  const fb = document.getElementById(id+'-fb');
+  const tag = document.getElementById(id+'-tag');
+
+  if(inputs.some(inp => inp.value.trim().length < 1)){
+    fb.textContent = '⚠️ Please type both words.';
+    fb.className = 'complete-feedback no';
+    return;
+  }
+
+  let allCorrect = true;
+  let anyWrong = false;
+
+  inputs.forEach((inp, idx) => {
+    if(inp.disabled) return;
+    const val = inp.value.trim().toLowerCase();
+    const accepted = item.answers[idx].map(a => a.toLowerCase());
+    const ok = accepted.includes(val);
+    if(ok){
+      inp.classList.add('correct');
+      inp.classList.remove('wrong');
+      inp.disabled = true;
+    } else {
+      inp.classList.add('wrong');
+      allCorrect = false;
+      anyWrong = true;
+    }
+  });
+
+  if(allCorrect){
+    state.solved = true;
+    inputs.forEach(inp => {
+      if(!inp.dataset.counted){ inp.dataset.counted = 'true'; addCorrect('s1'); }
+    });
+    fb.textContent = '✔ Both words correct!';
+    fb.className = 'complete-feedback ok';
+    playDing();
+    document.getElementById(id+'-check').disabled = true;
+    tag.textContent = '✔ Solved';
+    tag.style.color = 'var(--green)';
+    tag.style.background = '#e8f9ee';
+  } else {
+    state.attempts++;
+    fb.textContent = `❌ Some words are wrong. Attempt ${state.attempts}/3`;
+    fb.className = 'complete-feedback no';
+    playBuzz();
+    tag.textContent = `${state.attempts}/3 attempts`;
+    tag.style.color = 'var(--red)';
+    tag.style.background = '#fdecec';
+
+    inputs.forEach(inp => {
+      if(!inp.disabled && inp.value.trim() !== ''){
+        if(!inp.dataset.counted){
+          addWrong('s1');
+          inp.dataset.counted = 'true';
+        }
+      }
+    });
+
+    setTimeout(() => {
+      inputs.forEach(inp => { if(!inp.disabled) inp.classList.remove('wrong'); });
+    }, 800);
+
+    if(state.attempts >= state.maxAttempts){
+      inputs.forEach(inp => { inp.disabled = true; });
+      document.getElementById(id+'-check').disabled = true;
+      tag.textContent = '❌ Max attempts (3/3)';
+      tag.className = 'attempt-tag maxed';
+      fb.textContent = '❌ Maximum attempts reached.';
+    }
+  }
+}
+
+/* ============================================================
+   SECTIONS 2 & 3 — LISTENING MCQ
+   ============================================================ */
+const LISTEN_MEDIUM = [
+  { id:'lm_a', audio:'s2a', title:'Audio A — Ground Control Transmission', sub:'Apron operations & taxiway alerts',
+    questions:[
+      { id:'lm_a1', q:'What is Flight DAC 909 doing on Taxiway Alpha?',
+        options:[
+          {t:'Taxiing toward the main apron', c:true},
+          {t:'Parking at Stand number 5', c:false},
+          {t:'Refueling on the apron', c:false}
+        ]},
+      { id:'lm_a2', q:'Where is the hold short line located?',
+        options:[
+          {t:'In front of Runway 12', c:true},
+          {t:'Behind the aircraft wing', c:false},
+          {t:'Next to the hangar', c:false}
+        ]},
+      { id:'lm_a3', q:'What must all ground vehicles follow?',
+        options:[
+          {t:'The yellow signage next to the taxiway', c:true},
+          {t:'The catering truck route', c:false},
+          {t:'The fuel truck direction', c:false}
+        ]},
+      { id:'lm_a4', q:'Where is the catering truck driving?',
+        options:[
+          {t:'Across the apron', c:true},
+          {t:'Behind the aircraft wing', c:false},
+          {t:'Beside the nose gear', c:false}
+        ]},
+      { id:'lm_a5', q:'Where is the fuel truck parked?',
+        options:[
+          {t:'Behind the aircraft wing', c:true},
+          {t:'Beside the hangar', c:false},
+          {t:'Above the terminal', c:false}
+        ]}
+    ]
+  },
+  { id:'lm_b', audio:'s2b', title:'Audio B — Tower to Flight DAC 909', sub:'Wind conditions & taxi clearance',
+    questions:[
+      { id:'lm_b1', q:'What does the wind cone indicate?',
+        options:[
+          {t:'Strong winds from the north', c:true},
+          {t:'Light winds from the south', c:false},
+          {t:'No wind activity', c:false}
+        ]},
+      { id:'lm_b2', q:'Where is Stand number 5 located?',
+        options:[
+          {t:'Between Hangar A and Hangar B', c:true},
+          {t:'In front of Runway 12', c:false},
+          {t:'Above the control tower', c:false}
+        ]},
+      { id:'lm_b3', q:'Where is the marshaller standing?',
+        options:[
+          {t:'Beside the nose gear', c:true},
+          {t:'Behind the aircraft wing', c:false},
+          {t:'Inside the control tower', c:false}
+        ]},
+      { id:'lm_b4', q:'What must the flight crew do?',
+        options:[
+          {t:'Proceed to the apron and hold short of Runway 18', c:true},
+          {t:'Land on Runway 12 immediately', c:false},
+          {t:'Return to the hangar for repairs', c:false}
+        ]},
+      { id:'lm_b5', q:'Where is the threshold located?',
+        options:[
+          {t:'At the beginning of the runway', c:true},
+          {t:'Beside the main terminal', c:false},
+          {t:'Inside the hangar', c:false}
+        ]}
+    ]
+  }
+];
+
+const LISTEN_LONG = [
+  { id:'ll', audio:'s3', title:'Full Ground Operations Report — Flight DAC 909', sub:'Complete taxi and ramp operations report',
+    questions:[
+      { id:'ll_1', q:'Which taxiway is the aircraft using after clearing the runway?',
+        options:[
+          {t:'Taxiway Alpha', c:true},
+          {t:'Taxiway Bravo', c:false},
+          {t:'Taxiway Delta', c:false}
+        ]},
+      { id:'ll_2', q:'Where must the flight crew hold short?',
+        options:[
+          {t:'At Runway 18', c:true},
+          {t:'At Runway 12', c:false},
+          {t:'At Runway 24', c:false}
+        ]},
+      { id:'ll_3', q:'Why is the holding instruction mandatory?',
+        options:[
+          {t:'Because a catering truck is driving across the active ramp', c:true},
+          {t:'Because of strong winds from the south', c:false},
+          {t:'Because the runway is closed for repairs', c:false}
+        ]},
+      { id:'ll_4', q:'Where is Stand number 5 located?',
+        options:[
+          {t:'Between the main terminal and Hangar 2', c:true},
+          {t:'Behind the control tower', c:false},
+          {t:'In front of the hold short line', c:false}
+        ]},
+      { id:'ll_5', q:'What is the fuel truck doing?',
+        options:[
+          {t:'Parked behind the red safety lines, ready to refuel', c:true},
+          {t:'Driving across the apron', c:false},
+          {t:'Towing the aircraft to the hangar', c:false}
+        ]},
+      { id:'ll_6', q:'Why will the ground crew check the wind cone one last time?',
+        options:[
+          {t:'To verify any sudden changes in wind velocity', c:true},
+          {t:'To check the catering supplies', c:false},
+          {t:'To confirm the parking stand number', c:false}
+        ]}
+    ]
+  }
+];
+
+const listenState = {};
+
+function buildListening(containerId, dataList, sectionKey){
+  const container = document.getElementById(containerId);
+  container.innerHTML = dataList.map(item => {
+    const questionsHTML = item.questions.map((q, qi) => {
+      listenState[q.id] = { attempts:0, solved:false, maxAttempts:3 };
+      const shuffled = shuffle([...q.options]);
+      return `
+        <div class="question-block" id="${q.id}">
+          <div class="q-text">${qi+1}. ${q.q} <span class="attempt-tag" id="${q.id}-tag">0/3 attempts</span></div>
+          <div class="opt-grid">
+            ${shuffled.map(o => `<button class="opt-btn" onclick="checkListenMCQ('${q.id}', this, ${o.c}, '${sectionKey}')">${o.t}</button>`).join('')}
+          </div>
+        </div>
+      `;
+    }).join('');
+    return `
+      <div class="lab-card">
+        <div class="audio-player-box">
+          <div class="audio-btn-group">
+            <button class="audio-btn play-btn" onclick="playAudio('${item.audio}')">🔊</button>
+            <button class="audio-btn pause-btn" onclick="pauseAudio()">⏸</button>
+          </div>
+          <div class="audio-info">
+            <h4>${item.title}</h4>
+            <p>${item.sub}</p>
+          </div>
+        </div>
+        ${questionsHTML}
+      </div>
+    `;
+  }).join('');
+}
+
+function checkListenMCQ(qid, btn, isCorrect, sec){
+  const state = listenState[qid];
+  if(state.solved) return;
+  if(state.attempts >= state.maxAttempts) return;
+
+  const block = document.getElementById(qid);
+  const tag = document.getElementById(qid+'-tag');
+
+  if(isCorrect){
+    btn.classList.add('correct');
+    block.querySelectorAll('.opt-btn').forEach(b => { b.style.pointerEvents='none'; b.disabled=true; });
+    state.solved = true;
+    addCorrect(sec);
+    playDing();
+    tag.textContent = '✔ Correct! (' + (state.attempts+1) + '/3)';
+    tag.style.color = 'var(--green)';
+    tag.style.background = '#e8f9ee';
+  } else {
+    btn.classList.add('wrong');
+    state.attempts++;
+    addWrong(sec);
+    playBuzz();
+    const rem = state.maxAttempts - state.attempts;
+    tag.textContent = state.attempts + '/3 attempts — ' + rem + ' left';
+    tag.style.color = 'var(--red)';
+    tag.style.background = '#fdecec';
+    setTimeout(()=>{ btn.classList.remove('wrong'); }, 600);
+
+    if(state.attempts >= state.maxAttempts){
+      block.querySelectorAll('.opt-btn').forEach(b => { b.style.pointerEvents='none'; b.disabled=true; });
+      tag.textContent = '❌ Max attempts (3/3)';
+      tag.className = 'attempt-tag maxed';
+    }
+  }
+}
+
+/* ============================================================
+   SECTION 4 — LISTENING DRILL
+   ============================================================ */
+const DRILL_DATA = [
+  { id:'dr1', audio:'dr1', options:[
+    {t:'The fuel truck is parked beside the aircraft wing.', c:false},
+    {t:'The fuel truck is parked behind the aircraft wing.', c:true},
+    {t:'The fuel truck is parked above the aircraft wing.', c:false}
+  ]},
+  { id:'dr2', audio:'dr2', options:[
+    {t:'The marshaller is standing behind the nose gear.', c:false},
+    {t:'The marshaller is standing beside the nose gear.', c:true},
+    {t:'The marshaller is standing under the nose gear.', c:false}
+  ]},
+  { id:'dr3', audio:'dr3', options:[
+    {t:'The aircraft is taxiing on Taxiway Bravo.', c:false},
+    {t:'The aircraft is taxiing on Taxiway Alpha.', c:true},
+    {t:'The aircraft is taxiing on Taxiway Delta.', c:false}
+  ]},
+  { id:'dr4', audio:'dr4', options:[
+    {t:'The hold short line is in front of Runway 18.', c:false},
+    {t:'The hold short line is in front of Runway 12.', c:true},
+    {t:'The hold short line is in front of Runway 24.', c:false}
+  ]},
+  { id:'dr5', audio:'dr5', options:[
+    {t:'The catering truck is driving behind the apron.', c:false},
+    {t:'The catering truck is driving across the apron.', c:true},
+    {t:'The catering truck is driving beside the apron.', c:false}
+  ]},
+  { id:'dr6', audio:'dr6', options:[
+    {t:'The wind cone is located above the terminal.', c:true},
+    {t:'The wind cone is located behind the terminal.', c:false},
+    {t:'The wind cone is located beside the terminal.', c:false}
+  ]},
+  { id:'dr7', audio:'dr7', options:[
+    {t:'Stand number 5 is between Hangar A and Hangar B.', c:true},
+    {t:'Stand number 5 is between Terminal 1 and Terminal 2.', c:false},
+    {t:'Stand number 5 is between Runway 12 and Runway 18.', c:false}
+  ]},
+  { id:'dr8', audio:'dr8', options:[
+    {t:'The control tower is near the hangar.', c:false},
+    {t:'The control tower is near the main terminal.', c:true},
+    {t:'The control tower is near the fuel truck.', c:false}
+  ]},
+  { id:'dr9', audio:'dr9', options:[
+    {t:'The threshold is the end of the runway.', c:false},
+    {t:'The threshold is the beginning of the runway.', c:true},
+    {t:'The threshold is the middle of the runway.', c:false}
+  ]},
+  { id:'dr10', audio:'dr10', options:[
+    {t:'The intersection is the crossing of two runways.', c:false},
+    {t:'The intersection is the crossing of two taxiways.', c:true},
+    {t:'The intersection is the crossing of two aprons.', c:false}
+  ]},
+  { id:'dr11', audio:'dr11', options:[
+    {t:'The apron is used for parking and refueling.', c:true},
+    {t:'The apron is used for takeoff and landing.', c:false},
+    {t:'The apron is used for boarding and catering.', c:false}
+  ]},
+  { id:'dr12', audio:'dr12', options:[
+    {t:'The ground crew is working on the taxiway today.', c:false},
+    {t:'The ground crew is working on the apron today.', c:true},
+    {t:'The ground crew is working on the runway today.', c:false}
+  ]}
+];
+
+const drillState = {};
+
+function buildDrill(){
+  const area = document.getElementById('drillArea');
+  area.innerHTML = DRILL_DATA.map((item, i) => {
+    drillState[item.id] = { attempts:0, solved:false, maxAttempts:3 };
+    const shuffled = shuffle([...item.options]);
+    return `
+      <div class="question-block" id="${item.id}">
+        <div class="q-text">${i+1}. Listen and choose what you heard: <span class="attempt-tag" id="${item.id}-tag">0/3 attempts</span></div>
+        <div class="audio-btn-group" style="margin-bottom:12px;">
+          <button class="audio-btn play-btn small" onclick="playAudio('${item.audio}')">🔊</button>
+          <button class="audio-btn pause-btn small" onclick="pauseAudio()">⏸</button>
+        </div>
+        <div class="opt-grid">
+          ${shuffled.map(o => `<button class="opt-btn" onclick="checkDrill('${item.id}', this, ${o.c})">${o.t}</button>`).join('')}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function checkDrill(qid, btn, isCorrect){
+  const state = drillState[qid];
+  if(state.solved) return;
+  if(state.attempts >= state.maxAttempts) return;
+
+  const block = document.getElementById(qid);
+  const tag = document.getElementById(qid+'-tag');
+
+  if(isCorrect){
+    btn.classList.add('correct');
+    block.querySelectorAll('.opt-btn').forEach(b => { b.style.pointerEvents='none'; b.disabled=true; });
+    state.solved = true;
+    addCorrect('s4');
+    playDing();
+    tag.textContent = '✔ Correct! (' + (state.attempts+1) + '/3)';
+    tag.style.color = 'var(--green)';
+    tag.style.background = '#e8f9ee';
+  } else {
+    btn.classList.add('wrong');
+    state.attempts++;
+    addWrong('s4');
+    playBuzz();
+    const rem = state.maxAttempts - state.attempts;
+    tag.textContent = state.attempts + '/3 attempts — ' + rem + ' left';
+    tag.style.color = 'var(--red)';
+    tag.style.background = '#fdecec';
+    setTimeout(()=>{ btn.classList.remove('wrong'); }, 600);
+
+    if(state.attempts >= state.maxAttempts){
+      block.querySelectorAll('.opt-btn').forEach(b => { b.style.pointerEvents='none'; b.disabled=true; });
+      tag.textContent = '❌ Max attempts (3/3)';
+      tag.className = 'attempt-tag maxed';
+    }
+  }
+}
+
+/* ============================================================
+   SECTION 5 — LISTENING ROLEPLAY
+   ============================================================ */
+const ROLEPLAY_DATA = [
+  { id:'rp1', audio:'rp1', options:[
+    {t:'Behind the aircraft wing.', c:true},
+    {t:'Above the terminal.', c:false},
+    {t:'Inside the hangar.', c:false}
+  ]},
+  { id:'rp2', audio:'rp2', options:[
+    {t:'Beside the nose gear.', c:true},
+    {t:'Behind the catering truck.', c:false},
+    {t:'On the runway.', c:false}
+  ]},
+  { id:'rp3', audio:'rp3', options:[
+    {t:'On Taxiway Alpha.', c:true},
+    {t:'On the main apron.', c:false},
+    {t:'On Runway 12.', c:false}
+  ]},
+  { id:'rp4', audio:'rp4', options:[
+    {t:'In front of Runway 12.', c:true},
+    {t:'Behind Stand 5.', c:false},
+    {t:'Above the taxiway.', c:false}
+  ]},
+  { id:'rp5', audio:'rp5', options:[
+    {t:'Across the apron.', c:true},
+    {t:'Behind the hangar.', c:false},
+    {t:'Beside the control tower.', c:false}
+  ]},
+  { id:'rp6', audio:'rp6', options:[
+    {t:'Above the terminal.', c:true},
+    {t:'Below the terminal.', c:false},
+    {t:'Inside the terminal.', c:false}
+  ]},
+  { id:'rp7', audio:'rp7', options:[
+    {t:'Between Hangar A and Hangar B.', c:true},
+    {t:'In front of Runway 12.', c:false},
+    {t:'Behind the fuel truck.', c:false}
+  ]},
+  { id:'rp8', audio:'rp8', options:[
+    {t:'Near the main terminal.', c:true},
+    {t:'Inside the hangar.', c:false},
+    {t:'On the taxiway.', c:false}
+  ]},
+  { id:'rp9', audio:'rp9', options:[
+    {t:'The beginning of the runway.', c:true},
+    {t:'The end of the taxiway.', c:false},
+    {t:'The middle of the apron.', c:false}
+  ]},
+  { id:'rp10', audio:'rp10', options:[
+    {t:'Parking and refueling.', c:true},
+    {t:'Takeoff and landing.', c:false},
+    {t:'Catering and boarding.', c:false}
+  ]}
+];
+
+const roleplayState = {};
+
+function buildRoleplay(){
+  const area = document.getElementById('roleplayArea');
+  area.innerHTML = ROLEPLAY_DATA.map((item, i) => {
+    roleplayState[item.id] = { attempts:0, solved:false, maxAttempts:3 };
+    const shuffled = shuffle([...item.options]);
+    return `
+      <div class="question-block" id="${item.id}">
+        <div class="q-text">${i+1}. Listen and choose the correct response: <span class="attempt-tag" id="${item.id}-tag">0/3 attempts</span></div>
+        <div class="audio-btn-group" style="margin-bottom:12px;">
+          <button class="audio-btn play-btn small" onclick="playAudio('${item.audio}')">🔊</button>
+          <button class="audio-btn pause-btn small" onclick="pauseAudio()">⏸</button>
+        </div>
+        <div class="opt-grid">
+          ${shuffled.map(o => `<button class="opt-btn" onclick="checkRoleplay('${item.id}', this, ${o.c})">${o.t}</button>`).join('')}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function checkRoleplay(qid, btn, isCorrect){
+  const state = roleplayState[qid];
+  if(state.solved) return;
+  if(state.attempts >= state.maxAttempts) return;
+
+  const block = document.getElementById(qid);
+  const tag = document.getElementById(qid+'-tag');
+
+  if(isCorrect){
+    btn.classList.add('correct');
+    block.querySelectorAll('.opt-btn').forEach(b => { b.style.pointerEvents='none'; b.disabled=true; });
+    state.solved = true;
+    addCorrect('s5');
+    playDing();
+    tag.textContent = '✔ Correct! (' + (state.attempts+1) + '/3)';
+    tag.style.color = 'var(--green)';
+    tag.style.background = '#e8f9ee';
+  } else {
+    btn.classList.add('wrong');
+    state.attempts++;
+    addWrong('s5');
+    playBuzz();
+    const rem = state.maxAttempts - state.attempts;
+    tag.textContent = state.attempts + '/3 attempts — ' + rem + ' left';
+    tag.style.color = 'var(--red)';
+    tag.style.background = '#fdecec';
+    setTimeout(()=>{ btn.classList.remove('wrong'); }, 600);
+
+    if(state.attempts >= state.maxAttempts){
+      block.querySelectorAll('.opt-btn').forEach(b => { b.style.pointerEvents='none'; b.disabled=true; });
+      tag.textContent = '❌ Max attempts (3/3)';
+      tag.className = 'attempt-tag maxed';
+    }
+  }
+}
+
+/* ============================================================
+   NAVIGATION
+   ============================================================ */
+const phaseBtns = document.querySelectorAll('.phase-btn');
+const phases = document.querySelectorAll('.phase');
+
+function goToPhase(n){
+  phases.forEach(p => p.classList.remove('active'));
+  phaseBtns.forEach(b => b.classList.remove('active'));
+  document.getElementById('phase'+n).classList.add('active');
+  document.querySelector(`.phase-btn[data-phase="${n}"]`).classList.add('active');
+  document.getElementById('topProgress').style.width = (n/6*100)+'%';
+  window.scrollTo({top:0, behavior:'smooth'});
+  if(n == 6) renderFinalReview();
+}
+phaseBtns.forEach(btn=>{
+  btn.addEventListener('click', ()=> goToPhase(parseInt(btn.dataset.phase)));
+});
+
+/* ============================================================
+   FINAL REVIEW
+   ============================================================ */
+function renderFinalReview(){
+  const totalAttempts = STATS.totalCorrect + STATS.totalWrong;
+  const pct = totalAttempts > 0 ? Math.round((STATS.totalCorrect/totalAttempts)*100) : 0;
+  const passed = pct >= 80;
+
+  let medal = '🥉', label = 'Keep practicing Flight 9!';
+  if(pct >= 90){ medal = '🥇'; label = 'Excellent! Flight 9 Mastery!'; }
+  else if(pct >= 80){ medal = '🥈'; label = 'Great job! Flight 9 achieved!'; }
+  else { medal = '🥉'; label = 'Below 80%. You must repeat the entire Lab.'; }
+
+  const rows = [
+    {label:'1. Complete 2 Words', val:STATS.sections.s1.correct, max:STATS.sections.s1.max},
+    {label:'2. Medium Listening', val:STATS.sections.s2.correct, max:STATS.sections.s2.max},
+    {label:'3. Long Listening', val:STATS.sections.s3.correct, max:STATS.sections.s3.max},
+    {label:'4. Listening Drill', val:STATS.sections.s4.correct, max:STATS.sections.s4.max},
+    {label:'5. Listening Roleplay', val:STATS.sections.s5.correct, max:STATS.sections.s5.max},
+  ];
+
+  let resultHTML = '';
+  if(passed){
+    resultHTML = `<div class="result-box pass">✅ <strong>PASSED!</strong> You achieved ${pct}% — above the 80% requirement. Well done, Captain!</div>`;
+  } else {
+    resultHTML = `<div class="result-box fail">❌ <strong>NOT PASSED</strong> — You achieved ${pct}%. The minimum required is 80%. You must repeat the entire Lab.</div>`;
+  }
+
+  document.getElementById('finalArea').innerHTML = `
+    <div class="final-card">
+      <div class="medal">${medal}</div>
+      <h3>Flight 9 — Complete!</h3>
+      <div class="medal-label">${label}</div>
+      <div class="final-score-big">${pct}%</div>
+      <div class="final-score-sub">✅ ${STATS.totalCorrect} correct · ❌ ${STATS.totalWrong} errors · Total attempts: ${totalAttempts}</div>
+      ${resultHTML}
+      <div class="final-breakdown">
+        ${rows.map(r => `
+          <div class="fb-row">
+            <div class="fb-label">${r.label}</div>
+            <div class="fb-bar-outer"><div class="fb-bar-inner" style="width:${r.max > 0 ? (r.val/r.max*100) : 0}%;"></div></div>
+            <div class="fb-val">${r.val}/${r.max}</div>
+          </div>
+        `).join('')}
+      </div>
+      <button class="restart-btn" onclick="location.reload()">✈️ ${passed ? 'Fly Flight 9 Again' : 'Repeat Flight 9 (Required)'}</button>
+    </div>
+  `;
+}
+
+/* ============================================================
+   INIT
+   ============================================================ */
+buildComplete();
+buildListening('listenMediumArea', LISTEN_MEDIUM, 's2');
+buildListening('listenLongArea', LISTEN_LONG, 's3');
+buildDrill();
+buildRoleplay();
+goToPhase(1);
+
+setTimeout(()=>{
+  if('speechSynthesis' in window) window.speechSynthesis.getVoices();
+}, 500);
+</script>
+</body>
+</html>
